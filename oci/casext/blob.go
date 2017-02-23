@@ -45,7 +45,7 @@ type Blob struct {
 	//
 	// ispec.MediaTypeDescriptor => ispec.Descriptor
 	// ispec.MediaTypeImageManifest => ispec.Manifest
-	// ispec.MediaTypeImageManifestList => ispec.ManifestList
+	// ispec.MediaTypeImageIndex => ispec.ImageIndex
 	// ispec.MediaTypeImageLayer => io.ReadCloser
 	// ispec.MediaTypeImageLayerGzip => io.ReadCloser
 	// ispec.MediaTypeImageLayerNonDistributable => io.ReadCloser
@@ -96,11 +96,11 @@ func (b *Blob) load(ctx context.Context, engine cas.Engine) error {
 		}
 		b.Data = parsed
 
-	// ispec.MediaTypeImageManifestList => ispec.ManifestList
-	case ispec.MediaTypeImageManifestList:
-		parsed := ispec.ManifestList{}
+	// ispec.MediaTypeImageIndex => ispec.ImageIndex
+	case ispec.MediaTypeImageIndex:
+		parsed := ispec.ImageIndex{}
 		if err := json.NewDecoder(reader).Decode(&parsed); err != nil {
-			return errors.Wrap(err, "parse MediaTypeImageManifestList")
+			return errors.Wrap(err, "parse MediaTypeImageImageIndex")
 		}
 		b.Data = parsed
 
