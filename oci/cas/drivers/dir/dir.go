@@ -261,39 +261,6 @@ func (e *dirEngine) setImageIndex(ctx context.Context, imageIndex ispec.ImageInd
 	return nil
 }
 
-// PutReference adds a new reference descriptor blob to the image. This is
-// idempotent; a nil error means that "the descriptor is stored at NAME"
-// without implying "because of this PutReference() call". ErrClobber is
-// returned if there is already a descriptor stored at NAME, but does not
-// match the descriptor requested to be stored.
-func (e *dirEngine) PutReference(ctx context.Context, name string, descriptor ispec.Descriptor) error {
-	// TODO: Fix this.
-	if oldDescriptor, err := e.GetReference(ctx, name); err == nil {
-		// We should not return an error if the two descriptors are identical.
-		if !reflect.DeepEqual(oldDescriptor, descriptor) {
-			return cas.ErrClobber
-		}
-		return nil
-	} else if !os.IsNotExist(errors.Cause(err)) {
-		return errors.Wrap(err, "get old reference")
-	}
-
-	imageIndex, err := e.getImageIndex(ctx)
-	if err != nil {
-		return errors.Wrap(err, "get image index")
-	}
-
-	// Find the relevant manifest.
-	for _, _ = range imageIndex.Manifests {
-		// TODO TODO TODO
-	}
-
-	if err := e.setImageIndex(ctx, imageIndex); err != nil {
-		return errors.Wrap(err, "set image index")
-	}
-	return nil
-}
-
 // GetBlob returns a reader for retrieving a blob from the image, which the
 // caller must Close(). Returns os.ErrNotExist if the digest is not found.
 func (e *dirEngine) GetBlob(ctx context.Context, digest digest.Digest) (io.ReadCloser, error) {
@@ -303,18 +270,6 @@ func (e *dirEngine) GetBlob(ctx context.Context, digest digest.Digest) (io.ReadC
 	}
 	fh, err := os.Open(filepath.Join(e.path, path))
 	return fh, errors.Wrap(err, "open blob")
-}
-
-// GetReference returns a reference from the image. Returns os.ErrNotExist
-// if the name was not found.
-func (e *dirEngine) GetReference(ctx context.Context, name string) (ispec.Descriptor, error) {
-	_, err := e.getImageIndex(ctx)
-	if err != nil {
-		return ispec.Descriptor{}, errors.Wrap(err, "get image index")
-	}
-
-	// TODO TODO TODO
-	return ispec.Descriptor{}, nil
 }
 
 // DeleteBlob removes a blob from the image. This is idempotent; a nil
@@ -329,26 +284,6 @@ func (e *dirEngine) DeleteBlob(ctx context.Context, digest digest.Digest) error 
 	err = os.Remove(filepath.Join(e.path, path))
 	if err != nil && !os.IsNotExist(err) {
 		return errors.Wrap(err, "remove blob")
-	}
-	return nil
-}
-
-// DeleteReference removes a reference from the image. This is idempotent;
-// a nil error means "the content is not in the store" without implying
-// "because of this DeleteReference() call".
-func (e *dirEngine) DeleteReference(ctx context.Context, name string) error {
-	imageIndex, err := e.getImageIndex(ctx)
-	if err != nil {
-		return errors.Wrap(err, "get image index")
-	}
-
-	// Find the relevant manifest.
-	for _, _ = range imageIndex.Manifests {
-		// TODO TODO TODO
-	}
-
-	if err := e.setImageIndex(ctx, imageIndex); err != nil {
-		return errors.Wrap(err, "set image index")
 	}
 	return nil
 }
@@ -373,26 +308,6 @@ func (e *dirEngine) ListBlobs(ctx context.Context) ([]digest.Digest, error) {
 	}
 
 	return digests, nil
-}
-
-// ListReferences returns the set of reference names stored in the image.
-func (e *dirEngine) ListReferences(ctx context.Context) ([]string, error) {
-	imageIndex, err := e.getImageIndex(ctx)
-	if err != nil {
-		return nil, errors.Wrap(err, "get image index")
-	}
-
-	// Find the relevant manifest.
-	var refs []string
-	for _, manifest := range imageIndex.Manifests {
-		if tag, ok := manifest.Annotations[referenceAnnotation]; ok {
-			refs = append(refs, tag)
-		}
-	}
-
-	// TODO: Because of the weird setup with duplicates, as well as possible
-	// third-party annotations we need to make this much more generic.
-	return refs, nil
 }
 
 // Clean executes a garbage collection of any non-blob garbage in the store

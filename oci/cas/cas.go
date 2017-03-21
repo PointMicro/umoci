@@ -69,38 +69,33 @@ type Engine interface {
 	//       consistent output. Go's JSON library doesn't even attempt to sort
 	//       map[...]... objects (which have their iteration order randomised
 	//       in Go).
+	//
+	// TODO: This should be moved to casext.
 	PutBlobJSON(ctx context.Context, data interface{}) (digest digest.Digest, size int64, err error)
 
-	// PutReference adds a new reference descriptor blob to the image. This is
-	// idempotent; a nil error means that "the descriptor is stored at NAME"
-	// without implying "because of this PutReference() call". ErrClobber is
-	// returned if there is already a descriptor stored at NAME, but does not
-	// match the descriptor requested to be stored.
-	PutReference(ctx context.Context, name string, descriptor ispec.Descriptor) (err error)
+	// PutIndex sets the top-level index to the provided index, overriding the
+	// previous index value. This is idempotent; a nil error means that "the
+	// index is now the provided value" without implying "because of this
+	// PutIndex" call.
+	PutIndex(ctx context.Context, index ispec.ImageIndex) (err error)
 
 	// GetBlob returns a reader for retrieving a blob from the image, which the
 	// caller must Close(). Returns os.ErrNotExist if the digest is not found.
 	GetBlob(ctx context.Context, digest digest.Digest) (reader io.ReadCloser, err error)
 
-	// GetReference returns a reference from the image. Returns os.ErrNotExist
-	// if the name was not found.
-	GetReference(ctx context.Context, name string) (descriptor ispec.Descriptor, err error)
+	// GetIndex returns the top-level index for the OCI CAS, which is the
+	// entry-point for all named blobs in the CAS.
+	GetIndex(ctx context.Context) (index ispec.ImageIndex, err error)
 
 	// DeleteBlob removes a blob from the image. This is idempotent; a nil
 	// error means "the content is not in the store" without implying "because
 	// of this DeleteBlob() call".
 	DeleteBlob(ctx context.Context, digest digest.Digest) (err error)
 
-	// DeleteReference removes a reference from the image. This is idempotent;
-	// a nil error means "the content is not in the store" without implying
-	// "because of this DeleteReference() call".
-	DeleteReference(ctx context.Context, name string) (err error)
-
 	// ListBlobs returns the set of blob digests stored in the image.
+	//
+	// XXX: It is not clear whether ListBlobs is a sane thing to implement here.
 	ListBlobs(ctx context.Context) (digests []digest.Digest, err error)
-
-	// ListReferences returns the set of reference names stored in the image.
-	ListReferences(ctx context.Context) (names []string, err error)
 
 	// Clean executes a garbage collection of any non-blob garbage in the store
 	// (this includes temporary files and directories not reachable from the
